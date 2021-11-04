@@ -57,24 +57,5 @@ func connect(one *pts, two *pts) error {
 		}
 	}()
 
-	//fdset := &unix.FdSet{}
-	//fdset.Set(one.ptmx)
-	//fdset.Set(two.ptmx)
-	//
-	//nfd := int(math.Max(float64(one.ptmx), float64(two.ptmx))) + 1
-	//
-	//n, err := unix.Select(nfd, fdset, fdset, &unix.FdSet{}, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//log.Println("N", n)
-	//
-	//go func() {
-	//	_, err := unix.Select(nfd, fdset, &unix.FdSet{}, &unix.FdSet{}, nil)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}()
-
 	return nil
 }
