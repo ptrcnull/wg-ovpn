@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/binary"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"io"
 	"log"
 	"net"
@@ -13,8 +15,8 @@ import (
 
 type FakeTun struct {
 	file     io.ReadWriteCloser
-	clientIp net.IP
-	sourceIp net.IP
+	clientIp tcpip.Address
+	sourceIp tcpip.Address
 }
 
 func (f *FakeTun) File() *os.File {
@@ -31,18 +33,8 @@ func (f *FakeTun) Read(bytes []byte, offset int) (int, error) {
 
 	packetInfo(bytes[offset:])
 
-	func(bytes []byte) {
-		addr := f.sourceIp.To4()
-		bytes[16] = addr[0]
-		bytes[17] = addr[1]
-		bytes[18] = addr[2]
-		bytes[19] = addr[3]
-
-		tmp := append(append([]byte{}, bytes[0:10]...), bytes[12:20]...)
-		sum := checksum(tmp, 0)
-		bytes[10] = sum[0]
-		bytes[11] = sum[1]
-	}(bytes[offset:])
+	hdr := header.IPv4(bytes[offset:offset+20])
+	hdr.SetDestinationAddressWithChecksumUpdate(f.sourceIp)
 
 	packetInfo(bytes[offset:])
 
@@ -64,18 +56,9 @@ func (f *FakeTun) Write(bytes []byte, offset int) (int, error) {
 
 	packetInfo(bytes)
 
-	f.sourceIp = net.IPv4(bytes[12], bytes[13], bytes[14], bytes[15])
-
-	addr := f.clientIp.To4()
-	bytes[12] = addr[0]
-	bytes[13] = addr[1]
-	bytes[14] = addr[2]
-	bytes[15] = addr[3]
-
-	tmp := append(append([]byte{}, bytes[0:10]...), bytes[12:20]...)
-	sum := checksum(tmp, 0)
-	bytes[10] = sum[0]
-	bytes[11] = sum[1]
+	f.sourceIp = tcpip.Address(net.IPv4(bytes[12], bytes[13], bytes[14], bytes[15]).To4())
+	hdr := header.IPv4(bytes[:20]) // nobody uses options anyway ...right?
+	hdr.SetSourceAddressWithChecksumUpdate(f.clientIp)
 
 	packetInfo(bytes)
 

@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"golang.org/x/sys/unix"
+	"gvisor.dev/gvisor/pkg/tcpip"
 	"io/ioutil"
 	"log"
 	"net"
@@ -93,7 +94,7 @@ func main() {
 	for ovpnOutput.Len() == 0 {
 	}
 	ovpnData := strings.Split(ovpnOutput.String(), " ")
-	tun.clientIp = net.ParseIP(ovpnData[2])
+	tun.clientIp = tcpip.Address(net.ParseIP(ovpnData[2]).To4())
 
 	dev := device.NewDevice(tun, conn.NewDefaultBind(), device.NewLogger(device.LogLevelVerbose, ""))
 	dev.IpcSet(string(wgConfig))
