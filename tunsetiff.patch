@@ -1,0 +1,19 @@
+diff --git a/src/openvpn/tun.c b/src/openvpn/tun.c
+index 28f803e..925a427 100644
+--- a/src/openvpn/tun.c
++++ b/src/openvpn/tun.c
+@@ -2015,10 +2015,10 @@ open_tun(const char *dev, const char *dev_type, const char *dev_node, struct tun
+          * Use special ioctl that configures tun/tap device with the parms
+          * we set in ifr
+          */
+-        if (ioctl(tt->fd, TUNSETIFF, (void *) &ifr) < 0)
+-        {
+-            msg(M_ERR, "ERROR: Cannot ioctl TUNSETIFF %s", dev);
+-        }
++        // if (ioctl(tt->fd, TUNSETIFF, (void *) &ifr) < 0)
++        // {
++            // msg(M_ERR, "ERROR: Cannot ioctl TUNSETIFF %s", dev);
++        // }
+ 
+         msg(M_INFO, "TUN/TAP device %s opened", ifr.ifr_name);
+ 
