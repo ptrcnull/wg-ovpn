@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"golang.org/x/sys/unix"
 )
 
@@ -33,7 +32,7 @@ func connect(one *pts, two *pts) error {
 				panic(err)
 			}
 
-			fmt.Println("written", n)
+			//fmt.Println("written", n)
 		}
 	}()
 
@@ -53,7 +52,7 @@ func connect(one *pts, two *pts) error {
 				panic(err)
 			}
 
-			fmt.Println("written", n)
+			//fmt.Println("written", n)
 		}
 	}()
 
