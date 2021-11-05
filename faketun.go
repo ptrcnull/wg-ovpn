@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"io"
@@ -24,19 +23,18 @@ func (f *FakeTun) File() *os.File {
 }
 
 func (f *FakeTun) Read(bytes []byte, offset int) (int, error) {
-	log.Println("Read")
+	//log.Println("Read")
 	i, err := f.file.Read(bytes[offset:])
-	log.Println("READ", i, err)
 	if err != nil {
 		return 0, err
 	}
 
-	packetInfo(bytes[offset:])
+	//packetInfo(bytes[offset:])
 
-	hdr := header.IPv4(bytes[offset:offset+20])
+	hdr := header.IPv4(bytes[offset:offset+header.IPv4MaximumHeaderSize])
 	hdr.SetDestinationAddressWithChecksumUpdate(f.sourceIp)
 
-	packetInfo(bytes[offset:])
+	//packetInfo(bytes[offset:])
 
 	return i, nil
 }
@@ -51,16 +49,26 @@ func packetInfo(bytes []byte) {
 }
 
 func (f *FakeTun) Write(bytes []byte, offset int) (int, error) {
-	log.Println("Write")
+	//log.Println("Write")
 	bytes = bytes[offset:]
 
-	packetInfo(bytes)
+	hdr := header.IPv4(bytes[:header.IPv4MinimumSize])
+	// nobody uses options anyway ...right?
+	f.sourceIp = hdr.SourceAddress()
 
-	f.sourceIp = tcpip.Address(net.IPv4(bytes[12], bytes[13], bytes[14], bytes[15]).To4())
-	hdr := header.IPv4(bytes[:20]) // nobody uses options anyway ...right?
+	//packetInfo(bytes)
+	//log.Println(hdr.Protocol(), hdr.Checksum(), hdr.IsChecksumValid(), hdr.SourceAddress(), hdr.DestinationAddress())
+
 	hdr.SetSourceAddressWithChecksumUpdate(f.clientIp)
 
-	packetInfo(bytes)
+	// fix tcp checksum
+	if hdr.Protocol() == uint8(header.TCPProtocolNumber) {
+		hdrTcp := header.TCP(bytes[header.IPv4MinimumSize:header.IPv4MinimumSize+header.TCPMinimumSize])
+		hdrTcp.UpdateChecksumPseudoHeaderAddress(f.sourceIp, f.clientIp, true)
+	}
+
+	//packetInfo(bytes)
+	//log.Println(hdr.Protocol(), hdr.Checksum(), hdr.IsChecksumValid(), hdr.SourceAddress(), hdr.DestinationAddress())
 
 	//fmt.Println(hex.Dump(bytes))
 	return f.file.Write(bytes)
@@ -85,21 +93,4 @@ func (f *FakeTun) Events() chan tun.Event {
 
 func (f *FakeTun) Close() error {
 	return f.file.Close()
-}
-
-// Checksum is the "internet checksum" from https://tools.ietf.org/html/rfc1071.
-func checksum(buf []byte, initial uint16) []byte {
-	v := uint32(initial)
-	for i := 0; i < len(buf)-1; i += 2 {
-		v += uint32(binary.BigEndian.Uint16(buf[i:]))
-	}
-	if len(buf)%2 == 1 {
-		v += uint32(buf[len(buf)-1]) << 8
-	}
-	for v > 0xffff {
-		v = (v >> 16) + (v & 0xffff)
-	}
-	res := make([]byte, 2)
-	binary.BigEndian.PutUint16(res, ^uint16(v))
-	return res
 }
